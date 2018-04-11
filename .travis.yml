@@ -10,7 +10,7 @@ before_install:
 jobs:
   include:
   # Check generated contents are up to date and code is formatted.
-  - stage: Sanity check and unit tests 
+  - stage: Sanity check and unit tests
     script: ./scripts/check-make-generate.sh
   # Build Prometheus config reloader
   - script: cd contrib/prometheus-config-reloader && make build
@@ -28,3 +28,13 @@ jobs:
       script: make helm-sync-s3
       on:
         branch: master
+  - stage: push-docker-image
+    script:
+      - if [[ "$TRAVIS_PULL_REQUEST" == "false" ]]; then
+          make crossbuild &&
+          export TAG=$TRAVIS_BRANCH &&
+          make container &&
+          if [[ "$TRAVIS_BRANCH" =~ "release" ]]; then
+            docker tag quay.io/coreos/prometheus-operator:$TAG quay.io/coreos/prometheus-operator:$(cat VERSION);
+          fi;
+        fi
